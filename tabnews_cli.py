@@ -42,6 +42,10 @@ class TabNewsAPI:
             "strategy": strategy
         }
         response = self.session.get(url, params=params)
+        if response.status_code != 200:
+            error_data = response.json()
+            error_message = error_data.get("message", "Unknown error")
+            raise Exception(f"API Error ({response.status_code}): {error_message}")
         return response.json()
 
     def get_user_contents(self, username: str, page: int = 1, per_page: int = 10, strategy: str = "relevant"):
@@ -52,16 +56,28 @@ class TabNewsAPI:
             "strategy": strategy
         }
         response = self.session.get(url, params=params)
+        if response.status_code != 200:
+            error_data = response.json()
+            error_message = error_data.get("message", "Unknown error")
+            raise Exception(f"API Error ({response.status_code}): {error_message}")
         return response.json()
 
     def get_content(self, username: str, slug: str):
         url = f"{BASE_URL}/contents/{username}/{slug}"
         response = self.session.get(url)
+        if response.status_code != 200:
+            error_data = response.json()
+            error_message = error_data.get("message", "Unknown error")
+            raise Exception(f"API Error ({response.status_code}): {error_message}")
         return response.json()
 
     def get_comments(self, username: str, slug: str):
         url = f"{BASE_URL}/contents/{username}/{slug}/children"
         response = self.session.get(url)
+        if response.status_code != 200:
+            error_data = response.json()
+            error_message = error_data.get("message", "Unknown error")
+            raise Exception(f"API Error ({response.status_code}): {error_message}")
         return response.json()
 
     def login(self, email: str, password: str):
@@ -267,19 +283,31 @@ class TabNewsUI:
         return pages
 
     def update_feed(self):
-        self.contents = self.api.get_contents(self.current_page, 10, self.current_strategy)
         feed_text = []
         
         feed_text.append(f"[page]Page {self.current_page}[/page]")
         feed_text.append("")
         
-        for i, content in enumerate(self.contents):
-            prefix = "→ " if i == self.selected_index else "  "
-            title = self.wrap_text(content['title'], width=self.terminal_width - 4)
-            author = content['owner_username']
-            feed_text.append(f"{prefix}{title}")
-            feed_text.append(f"    by {author}")
+        try:
+            self.contents = self.api.get_contents(self.current_page, 10, self.current_strategy)
+            
+            for i, content in enumerate(self.contents):
+                prefix = "→ " if i == self.selected_index else "  "
+                title = self.wrap_text(content['title'], width=self.terminal_width - 4)
+                author = content['owner_username']
+                feed_text.append(f"{prefix}{title}")
+                feed_text.append(f"    by {author}")
+                feed_text.append("")
+        except Exception as e:
+            # Handle API errors and display them nicely in the feed view
+            error_message = str(e)
+            wrapped_error = self.wrap_text(error_message, width=self.terminal_width - 4)
+            feed_text.append("[title]Error fetching content[/title]")
             feed_text.append("")
+            feed_text.append(wrapped_error)
+            feed_text.append("")
+            feed_text.append("Try again later or change page.")
+            self.contents = []  # Reset contents to empty list
         
         self.feed_control.text = "\n".join(feed_text)
         self.content_control.text = ""
@@ -288,10 +316,23 @@ class TabNewsUI:
     def show_content(self, content):
         self.view_mode = "content"
         self.current_content_page = 0
-        full_content = self.api.get_content(content["owner_username"], content["slug"])
-        self.current_content = full_content
-        self.prepare_content_pages()
-        self.update_content_view()
+        try:
+            full_content = self.api.get_content(content["owner_username"], content["slug"])
+            self.current_content = full_content
+            self.prepare_content_pages()
+            self.update_content_view()
+        except Exception as e:
+            error_message = str(e)
+            self.content_pages = []
+            error_content = [
+                f"[title]Error loading content[/title]",
+                "",
+                self.wrap_text(error_message, width=self.terminal_width - 4),
+                "",
+                "Press Esc to go back to the feed."
+            ]
+            self.content_pages.append("\n".join(error_content))
+            self.update_content_view()
 
     def prepare_content_pages(self):
         if not self.current_content:
@@ -335,26 +376,37 @@ class TabNewsUI:
             return
 
         self.view_mode = "comments"
-        comments = self.api.get_comments(
-            self.current_content["owner_username"],
-            self.current_content["slug"]
-        )
-        
         comments_text = []
-        for comment in comments:
-            author = comment['owner_username']
-            date = comment['created_at']
-            body = self.wrap_text(comment['body'], width=self.terminal_width - 4)
-            
-            comments_text.extend([
-                f"[author]{author}[/author] | [date]{date}[/date]",
-                "",
-                body,
-                "",
-                "[separator]" + "─" * (self.terminal_width - 4) + "[/separator]",
-                ""
-            ])
         
+        try:
+            comments = self.api.get_comments(
+                self.current_content["owner_username"],
+                self.current_content["slug"]
+            )
+            
+            for comment in comments:
+                author = comment['owner_username']
+                date = comment['created_at']
+                body = self.wrap_text(comment['body'], width=self.terminal_width - 4)
+                
+                comments_text.extend([
+                    f"[author]{author}[/author] | [date]{date}[/date]",
+                    "",
+                    body,
+                    "",
+                    "[separator]" + "─" * (self.terminal_width - 4) + "[/separator]",
+                    ""
+                ])
+        except Exception as e:
+            error_message = str(e)
+            comments_text = [
+                "[title]Error loading comments[/title]",
+                "",
+                self.wrap_text(error_message, width=self.terminal_width - 4),
+                "",
+                "Press Esc to go back to the content."
+            ]
+            
         self.comments_control.text = "\n".join(comments_text)
         self.content_control.text = ""
 
