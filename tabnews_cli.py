@@ -219,17 +219,17 @@ class TabNewsUI:
         )
 
         self.style = Style.from_dict({
-            'header': 'bg:
-            'feed': 'bg:
-            'content': 'bg:
-            'comments': 'bg:
-            'title': 'bold 
-            'author': 'italic 
-            'date': '
-            'comment': '
-            'page': 'bold 
-            'separator': '
-            'page_number': '
+            'header': 'bg:ansiblue fg:white',
+            'feed': 'bg:ansiblack fg:white',
+            'content': 'bg:ansiblack fg:white',
+            'comments': 'bg:ansiblack fg:white',
+            'title': 'bold fg:ansiyellow',
+            'author': 'italic fg:ansigreen',
+            'date': 'fg:ansicyan',
+            'comment': 'fg:ansiyellow',
+            'page': 'bold fg:ansiyellow',
+            'separator': 'fg:ansiblue',
+            'page_number': 'fg:ansicyan'
         })
 
         self.app = Application(
