@@ -1,4 +1,6 @@
 # TabNews CLI
+![image](https://github.com/user-attachments/assets/1f975bae-da4b-4901-9c81-9d46791dd38a)
+![image](https://github.com/user-attachments/assets/89dceab7-0089-422b-84be-a4a9579b70aa)
 
 Uma interface de linha de comando interativa e bonita para o TabNews.
 
